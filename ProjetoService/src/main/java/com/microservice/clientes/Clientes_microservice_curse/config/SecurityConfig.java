@@ -32,36 +32,40 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> {
-                    try {
-                        csrf.disable()
-                        .authorizeHttpRequests(auth -> auth
-                                .requestMatchers("/actuator/health", "/actuator/info").permitAll()
-                                .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/webjars/**").permitAll()
-                                .anyRequest().authenticated()
+                .csrf().disable()
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers(
+                                "/actuator/health",
+                                "/actuator/info",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/webjars/**"
+                        ).permitAll()
+                        .anyRequest().authenticated()
+                )
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .oauth2ResourceServer(oauth2 -> oauth2
+                        .jwt(jwtConfigurer -> jwtConfigurer
+                                .jwtAuthenticationConverter(jwtAuthenticationConverter())
                         )
-                        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                        .oauth2ResourceServer(oauth2 -> oauth2
-                                .jwt(jwtConfigurer -> jwtConfigurer
-                                                .jwtAuthenticationConverter(jwtAuthenticationConverter())
-                                )
-                        )
-                        .exceptionHandling(exceptions -> exceptions
-                                .authenticationEntryPoint((request, response, authException) -> {
-                                    response.setContentType("application/json;charset=UTF-8");
-                                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                                    response.getWriter().write("{\"timestamp\":\"" + System.currentTimeMillis() + "\",\"status\":401,\"error\":\"Unauthorized\",\"message\":\"" + authException.getMessage() + "\",\"path\":\"" + request.getRequestURI() + "\"}");
-                                })
-                                .accessDeniedHandler((request, response, accessDeniedException) -> {
-                                    response.setContentType("application/json;charset=UTF-8");
-                                    response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-                                    response.getWriter().write("{\"timestamp\":\"" + System.currentTimeMillis() + "\",\"status\":403,\"error\":\"Forbidden\",\"message\":\"" + accessDeniedException.getMessage() + "\",\"path\":\"" + request.getRequestURI() + "\"}");
-                                })
-                        );
-                    } catch (Exception e) {
-                        throw new RuntimeException(e);
-                    }
-                });
+                )
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.getWriter().write("{\"timestamp\":\"" + System.currentTimeMillis()
+                                    + "\",\"status\":401,\"error\":\"Unauthorized\",\"message\":\""
+                                    + authException.getMessage() + "\",\"path\":\"" + request.getRequestURI() + "\"}");
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setContentType("application/json;charset=UTF-8");
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.getWriter().write("{\"timestamp\":\"" + System.currentTimeMillis()
+                                    + "\",\"status\":403,\"error\":\"Forbidden\",\"message\":\""
+                                    + accessDeniedException.getMessage() + "\",\"path\":\"" + request.getRequestURI() + "\"}");
+                        })
+                );
 
         return http.build();
     }
@@ -70,7 +74,7 @@ public class SecurityConfig {
     public JwtDecoder jwtDecoder() {
         byte[] secretKeyBytes = jwtSecret.getBytes(StandardCharsets.UTF_8);
         if (secretKeyBytes.length < 32) {
-            System.err.println("AVISO (ProjectService): JWT Secret fornecido é muito curto! Deve ter pelo menos 32 bytes para HS256. A aplicação pode não iniciar ou a validação de token falhará.");
+            System.err.println("⚠️ JWT Secret fornecido é muito curto! Deve ter pelo menos 32 bytes para HS256.");
         }
         SecretKey key = new SecretKeySpec(secretKeyBytes, "HmacSHA256");
         return NimbusJwtDecoder.withSecretKey(key).build();
@@ -79,7 +83,7 @@ public class SecurityConfig {
     @Bean
     public Converter<Jwt, ? extends AbstractAuthenticationToken> jwtAuthenticationConverter() {
         JwtGrantedAuthoritiesConverter authoritiesConverter = new JwtGrantedAuthoritiesConverter();
-        authoritiesConverter.setAuthorityPrefix("ROLE_");
+        authoritiesConverter.setAuthorityPrefix("");
         authoritiesConverter.setAuthoritiesClaimName("roles");
 
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();

@@ -74,7 +74,7 @@ public class ProjetoController {
     }
 
 
-    @PostMapping
+    @PostMapping("/novo-projeto")
     @PreAuthorize("hasRole('PROFESSOR')")
     public ResponseEntity<?> solicitarNovoProjeto(@Valid @RequestBody ProjetoDTO projetoDTO, Authentication authentication) {
         try {
@@ -91,7 +91,7 @@ public class ProjetoController {
         }
     }
 
-    @GetMapping
+    @GetMapping ("/listar-projetos")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<ProjetoDTO>> listarProjetos(
             @RequestParam(required = false) StatusProjetoModel status,
